@@ -1,8 +1,10 @@
-// CategoryController.java
 package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.dto.CategoryDTO;
 import com.example.inventory_backend.model.Category;
+import com.example.inventory_backend.model.Company;
+import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.CategoryService;
 import com.example.inventory_backend.service.NotificationService;
 
@@ -23,22 +25,33 @@ public class CategoryController {
 
     @Autowired
     private NotificationService notificationService;
+    
+    @Autowired
+    private CompanyRepository companyRepository;
 
     @Autowired
     public CategoryController(CategoryService categoryService) {
         this.categoryService = categoryService;
     }
+    
+    private Company getCurrentCompany() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+    }
 
     @GetMapping
     public List<CategoryDTO> getAllCategories() {
-        List<Category> categories = categoryService.getAllCategories();
+        Company company = getCurrentCompany();
+        List<Category> categories = categoryService.getAllCategories(company);
         return categories.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<CategoryDTO> getCategoryById(@PathVariable Long id) {
         try {
-            Category category = categoryService.getCategoryById(id);
+            Company company = getCurrentCompany();
+            Category category = categoryService.getCategoryById(id, company);
             return ResponseEntity.ok(convertToDTO(category));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -48,7 +61,8 @@ public class CategoryController {
     @GetMapping("/name/{name}")
     public ResponseEntity<CategoryDTO> getCategoryByName(@PathVariable String name) {
         try {
-            Category category = categoryService.getCategoryByName(name);
+            Company company = getCurrentCompany();
+            Category category = categoryService.getCategoryByName(name, company);
             return ResponseEntity.ok(convertToDTO(category));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -57,10 +71,11 @@ public class CategoryController {
 
     @PostMapping
     public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO categoryDTO) {
+        Company company = getCurrentCompany();
         Category category = convertToEntity(categoryDTO);
-        Category savedCategory = categoryService.saveCategory(category);
+        Category savedCategory = categoryService.saveCategory(category, company);
 
-        notificationService.notifyNewCategory(savedCategory.getId(), savedCategory.getName());
+        notificationService.notifyNewCategory(savedCategory.getId(), savedCategory.getName(), company);
         
         return new ResponseEntity<>(convertToDTO(savedCategory), HttpStatus.CREATED);
     }
@@ -68,12 +83,13 @@ public class CategoryController {
     @PutMapping("/{id}")
     public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id, @RequestBody CategoryDTO categoryDTO) {
         try {
-            Category existingCategory = categoryService.getCategoryById(id);
+            Company company = getCurrentCompany();
+            Category existingCategory = categoryService.getCategoryById(id, company);
             
             existingCategory.setName(categoryDTO.getName());
             existingCategory.setDescription(categoryDTO.getDescription());
             
-            Category updatedCategory = categoryService.saveCategory(existingCategory);
+            Category updatedCategory = categoryService.saveCategory(existingCategory, company);
             return ResponseEntity.ok(convertToDTO(updatedCategory));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -83,7 +99,8 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         try {
-            categoryService.deleteCategory(id);
+            Company company = getCurrentCompany();
+            categoryService.deleteCategory(id, company);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

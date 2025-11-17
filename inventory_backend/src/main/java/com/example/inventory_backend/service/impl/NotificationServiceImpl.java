@@ -1,6 +1,7 @@
 package com.example.inventory_backend.service.impl;
 
 import com.example.inventory_backend.dto.NotificationDTO;
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Notification;
 import com.example.inventory_backend.model.User;
 import com.example.inventory_backend.repository.NotificationRepository;
@@ -80,8 +81,9 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     @Transactional
-    public void notifyNewProduct(Long productId, String productName) {
-        List<User> users = userRepository.findAll();
+    public void notifyNewProduct(Long productId, String productName, Company company) {
+        // Only notify users in the same company
+        List<User> users = userRepository.findByCompany(company);
         
         for (User user : users) {
             Notification notification = new Notification();
@@ -92,9 +94,9 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setEntityType("product");
             notification.setEntityId(productId);
             notification.setUser(user);
+            notification.setCompany(company);
             notification.setRead(false);
             
-            // Set styling details
             notification.setIconName("ShoppingCart");
             notification.setIconColor("#3498db");
             notification.setAvatarColor("rgba(52, 152, 219, 0.2)");
@@ -107,8 +109,8 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     @Transactional
-    public void notifyNewCategory(Long categoryId, String categoryName) {
-        List<User> users = userRepository.findAll();
+    public void notifyNewCategory(Long categoryId, String categoryName, Company company) {
+        List<User> users = userRepository.findByCompany(company);
         
         for (User user : users) {
             Notification notification = new Notification();
@@ -119,9 +121,9 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setEntityType("category");
             notification.setEntityId(categoryId);
             notification.setUser(user);
+            notification.setCompany(company);
             notification.setRead(false);
             
-            // Set styling details
             notification.setIconName("Category");
             notification.setIconColor("#2ecc71");
             notification.setAvatarColor("rgba(46, 204, 113, 0.2)");
@@ -134,8 +136,8 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     @Transactional
-    public void notifyNewSupplier(Long supplierId, String supplierName) {
-        List<User> users = userRepository.findAll();
+    public void notifyNewSupplier(Long supplierId, String supplierName, Company company) {
+        List<User> users = userRepository.findByCompany(company);
         
         for (User user : users) {
             Notification notification = new Notification();
@@ -146,9 +148,9 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setEntityType("supplier");
             notification.setEntityId(supplierId);
             notification.setUser(user);
+            notification.setCompany(company);
             notification.setRead(false);
             
-            // Set styling details
             notification.setIconName("LocalShipping");
             notification.setIconColor("#9b59b6");
             notification.setAvatarColor("rgba(155, 89, 182, 0.2)");
@@ -161,15 +163,14 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     @Transactional
-    public void notifyNewUser(Long userId, String userName, String role) {
-        // Only notify admins about new users
-        List<User> admins = userRepository.findAll().stream()
+    public void notifyNewUser(Long userId, String userName, String role, Company company) {
+        // Only notify admins in the same company
+        List<User> admins = userRepository.findByCompany(company).stream()
                 .filter(u -> u.getRole() == User.Role.ADMIN)
                 .collect(Collectors.toList());
         
         for (User admin : admins) {
             if (admin.getId().equals(userId)) {
-                // Don't notify admins about their own creation
                 continue;
             }
             
@@ -181,9 +182,9 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setEntityType("user");
             notification.setEntityId(userId);
             notification.setUser(admin);
+            notification.setCompany(company);
             notification.setRead(false);
             
-            // Set styling details
             notification.setIconName("Person");
             notification.setIconColor("#e74c3c");
             notification.setAvatarColor("rgba(231, 76, 60, 0.2)");

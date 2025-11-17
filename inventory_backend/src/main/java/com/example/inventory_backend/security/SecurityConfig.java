@@ -66,20 +66,18 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> 
                 auth.requestMatchers("/api/auth/**").permitAll()
-                    
-                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()  // Important for CORS preflight requests
-                    .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/suppliers/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/inventory/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/export/**").authenticated()
-                    .requestMatchers("/api/admin/users/**").authenticated() // Temporarily reduce security to identify the issue
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/test/public").permitAll()
                     .requestMatchers("/api/test/user").authenticated()
                     .requestMatchers("/api/test/manager").hasAnyRole("MANAGER", "ADMIN")
                     .requestMatchers("/api/test/admin").hasRole("ADMIN")
                     .requestMatchers("/api/users/**").hasRole("ADMIN")
                     .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/api/products/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/categories/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/suppliers/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/inventory/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/export/**").authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")
                     .requestMatchers(HttpMethod.PUT, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")
                     .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")

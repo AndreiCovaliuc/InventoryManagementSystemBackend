@@ -8,35 +8,12 @@ public class InventoryHistoryDTO {
     private Integer totalQuantity;
     private String formattedTimestamp;
     
-    public Long getId() {
-        return id;
-    }
-    
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-    
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-    
-    public Integer getTotalQuantity() {
-        return totalQuantity;
-    }
-    
-    public void setTotalQuantity(Integer totalQuantity) {
-        this.totalQuantity = totalQuantity;
-    }
-    
-    public String getFormattedTimestamp() {
-        return formattedTimestamp;
-    }
-    
-    public void setFormattedTimestamp(String formattedTimestamp) {
-        this.formattedTimestamp = formattedTimestamp;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    public Integer getTotalQuantity() { return totalQuantity; }
+    public void setTotalQuantity(Integer totalQuantity) { this.totalQuantity = totalQuantity; }
+    public String getFormattedTimestamp() { return formattedTimestamp; }
+    public void setFormattedTimestamp(String formattedTimestamp) { this.formattedTimestamp = formattedTimestamp; }
 }

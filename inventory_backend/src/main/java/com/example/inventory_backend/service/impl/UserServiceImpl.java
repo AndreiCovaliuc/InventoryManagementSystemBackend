@@ -1,5 +1,6 @@
 package com.example.inventory_backend.service.impl;
 
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.User;
 import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.service.UserService;
@@ -19,8 +20,8 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<User> getAllUsers(Company company) {
+        return userRepository.findByCompany(company);
     }
     
     @Override
@@ -37,7 +38,6 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public User createUser(User user) {
-        // You might want to add password hashing here in a real application
         return userRepository.save(user);
     }
     
@@ -45,13 +45,10 @@ public class UserServiceImpl implements UserService {
     public User updateUser(User user) {
         User existingUser = getUserById(user.getId());
         
-        // Update user fields
         existingUser.setName(user.getName());
         existingUser.setEmail(user.getEmail());
         
-        // Don't update password if it's empty or null
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            // You might want to add password hashing here in a real application
             existingUser.setPassword(user.getPassword());
         }
         

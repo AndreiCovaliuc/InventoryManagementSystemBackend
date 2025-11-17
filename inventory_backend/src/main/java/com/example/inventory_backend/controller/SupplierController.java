@@ -1,8 +1,10 @@
-// SupplierController.java
 package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.dto.SupplierDTO;
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Supplier;
+import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.NotificationService;
 import com.example.inventory_backend.service.SupplierService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,24 +23,34 @@ public class SupplierController {
     private final SupplierService supplierService;
 
     @Autowired
+    private CompanyRepository companyRepository;
+
+    @Autowired
     public SupplierController(SupplierService supplierService) {
         this.supplierService = supplierService;
     }
 
     @Autowired
     private NotificationService notificationService;
-
+    
+    private Company getCurrentCompany() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+    }
 
     @GetMapping
     public List<SupplierDTO> getAllSuppliers() {
-        List<Supplier> suppliers = supplierService.getAllSuppliers();
+        Company company = getCurrentCompany();
+        List<Supplier> suppliers = supplierService.getAllSuppliers(company);
         return suppliers.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<SupplierDTO> getSupplierById(@PathVariable Long id) {
         try {
-            Supplier supplier = supplierService.getSupplierById(id);
+            Company company = getCurrentCompany();
+            Supplier supplier = supplierService.getSupplierById(id, company);
             return ResponseEntity.ok(convertToDTO(supplier));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -47,7 +59,8 @@ public class SupplierController {
     
     @GetMapping("/search")
     public List<SupplierDTO> searchSuppliers(@RequestParam String name) {
-        return supplierService.searchSuppliersByName(name)
+        Company company = getCurrentCompany();
+        return supplierService.searchSuppliersByName(name, company)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -55,10 +68,11 @@ public class SupplierController {
 
     @PostMapping
     public ResponseEntity<SupplierDTO> createSupplier(@RequestBody SupplierDTO supplierDTO) {
+        Company company = getCurrentCompany();
         Supplier supplier = convertToEntity(supplierDTO);
-        Supplier savedSupplier = supplierService.saveSupplier(supplier);
+        Supplier savedSupplier = supplierService.saveSupplier(supplier, company);
 
-        notificationService.notifyNewSupplier(savedSupplier.getId(), savedSupplier.getName());
+        notificationService.notifyNewSupplier(savedSupplier.getId(), savedSupplier.getName(), company);
         
         return new ResponseEntity<>(convertToDTO(savedSupplier), HttpStatus.CREATED);
     }
@@ -66,7 +80,8 @@ public class SupplierController {
     @PutMapping("/{id}")
     public ResponseEntity<SupplierDTO> updateSupplier(@PathVariable Long id, @RequestBody SupplierDTO supplierDTO) {
         try {
-            Supplier existingSupplier = supplierService.getSupplierById(id);
+            Company company = getCurrentCompany();
+            Supplier existingSupplier = supplierService.getSupplierById(id, company);
             
             existingSupplier.setName(supplierDTO.getName());
             existingSupplier.setContactName(supplierDTO.getContactName());
@@ -74,7 +89,7 @@ public class SupplierController {
             existingSupplier.setPhone(supplierDTO.getPhone());
             existingSupplier.setAddress(supplierDTO.getAddress());
             
-            Supplier updatedSupplier = supplierService.saveSupplier(existingSupplier);
+            Supplier updatedSupplier = supplierService.saveSupplier(existingSupplier, company);
             return ResponseEntity.ok(convertToDTO(updatedSupplier));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -84,7 +99,8 @@ public class SupplierController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
         try {
-            supplierService.deleteSupplier(id);
+            Company company = getCurrentCompany();
+            supplierService.deleteSupplier(id, company);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

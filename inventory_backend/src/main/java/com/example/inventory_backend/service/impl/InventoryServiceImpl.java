@@ -1,6 +1,6 @@
-// InventoryServiceImpl.java
 package com.example.inventory_backend.service.impl;
 
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Inventory;
 import com.example.inventory_backend.model.Product;
 import com.example.inventory_backend.repository.InventoryRepository;
@@ -30,38 +30,50 @@ public class InventoryServiceImpl implements InventoryService {
     }
     
     @Override
-    public List<Inventory> getAllInventory() {
-        return inventoryRepository.findAll();
+    public List<Inventory> getAllInventory(Company company) {
+        return inventoryRepository.findByCompany(company);
     }
     
     @Override
-    public Inventory getInventoryById(Long id) {
-        return inventoryRepository.findById(id)
+    public Inventory getInventoryById(Long id, Company company) {
+        Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inventory not found with id: " + id));
+        
+        if (!inventory.getCompany().getId().equals(company.getId())) {
+            throw new RuntimeException("Inventory not found with id: " + id);
+        }
+        
+        return inventory;
     }
     
     @Override
-    public Inventory getInventoryByProduct(Product product) {
-        return inventoryRepository.findByProduct(product)
+    public Inventory getInventoryByProduct(Product product, Company company) {
+        Inventory inventory = inventoryRepository.findByProduct(product)
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product: " + product.getName()));
+        
+        if (!inventory.getCompany().getId().equals(company.getId())) {
+            throw new RuntimeException("Inventory not found for product: " + product.getName());
+        }
+        
+        return inventory;
     }
     
     @Override
-    public List<Inventory> getLowStockItems() {
-        return inventoryRepository.findLowStockItems();
+    public List<Inventory> getLowStockItems(Company company) {
+        return inventoryRepository.findLowStockItemsByCompany(company);
     }
     
     @Override
-    public Inventory saveInventory(Inventory inventory) {
+    public Inventory saveInventory(Inventory inventory, Company company) {
         boolean isNewInventory = inventory.getId() == null;
+        inventory.setCompany(company);
         inventory.setLastUpdated(LocalDateTime.now());
         Inventory savedInventory = inventoryRepository.save(inventory);
         
-        // Record history
         if (isNewInventory) {
-            historyService.recordProductChange(inventory.getProduct(), inventory.getQuantity(), "Initial inventory");
+            historyService.recordProductChange(inventory.getProduct(), inventory.getQuantity(), "Initial inventory", company);
         } else {
-            historyService.recordInventoryState();
+            historyService.recordInventoryState(company);
         }
         
         return savedInventory;
@@ -69,9 +81,13 @@ public class InventoryServiceImpl implements InventoryService {
     
     @Override
     @Transactional
-    public Inventory updateQuantity(Long productId, Integer quantityChange) {
+    public Inventory updateQuantity(Long productId, Integer quantityChange, Company company) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+        
+        if (!product.getCompany().getId().equals(company.getId())) {
+            throw new RuntimeException("Product not found with id: " + productId);
+        }
         
         Inventory inventory = inventoryRepository.findByProduct(product)
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product: " + product.getName()));
@@ -81,17 +97,20 @@ public class InventoryServiceImpl implements InventoryService {
         
         Inventory updatedInventory = inventoryRepository.save(inventory);
         
-        // Record history after update
         historyService.recordProductChange(product, quantityChange, 
-                quantityChange > 0 ? "Stock increase" : "Stock decrease");
+                quantityChange > 0 ? "Stock increase" : "Stock decrease", company);
         
         return updatedInventory;
     }
     
     @Override
-    public boolean isInStock(Long productId, Integer quantity) {
+    public boolean isInStock(Long productId, Integer quantity, Company company) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+        
+        if (!product.getCompany().getId().equals(company.getId())) {
+            throw new RuntimeException("Product not found with id: " + productId);
+        }
         
         Inventory inventory = inventoryRepository.findByProduct(product)
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product: " + product.getName()));
@@ -100,15 +119,12 @@ public class InventoryServiceImpl implements InventoryService {
     }
     
     @Override
-    public void deleteInventory(Long id) {
-        Inventory inventory = inventoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Inventory not found with id: " + id));
-        
+    public void deleteInventory(Long id, Company company) {
+        Inventory inventory = getInventoryById(id, company);
         Product product = inventory.getProduct();
         
         inventoryRepository.deleteById(id);
         
-        // Record the deletion in history
-        historyService.recordProductChange(product, -inventory.getQuantity(), "Inventory deleted");
+        historyService.recordProductChange(product, -inventory.getQuantity(), "Inventory deleted", company);
     }
 }

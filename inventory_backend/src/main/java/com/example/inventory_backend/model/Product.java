@@ -1,7 +1,6 @@
 package com.example.inventory_backend.model;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -29,15 +28,19 @@ public class Product {
     
     private String description;
     
-    @JsonBackReference
+    @JsonBackReference(value = "category-products")
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
     
-    @JsonBackReference
+    @JsonBackReference(value = "supplier-products")
     @ManyToOne
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
+    
+    @ManyToOne
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
     
     private BigDecimal price;
     private String sku;

@@ -22,6 +22,10 @@ public class Chat {
     )
     private List<User> participants = new ArrayList<>();
     
+    @ManyToOne
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

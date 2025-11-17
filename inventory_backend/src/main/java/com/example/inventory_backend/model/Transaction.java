@@ -1,4 +1,3 @@
-// Transaction.java
 package com.example.inventory_backend.model;
 
 import jakarta.persistence.*;
@@ -41,6 +40,10 @@ public class Transaction {
     
     @Column(name = "reference_number")
     private String referenceNumber;
+    
+    @ManyToOne
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
     
     public enum TransactionType {
         PURCHASE, 

@@ -17,101 +17,28 @@ public class TransactionDTO {
     private String userName;
     private String referenceNumber;
     
-    // Getters
-    public Long getId() {
-        return id;
-    }
-    
-    public Long getProductId() {
-        return productId;
-    }
-    
-    public String getProductName() {
-        return productName;
-    }
-    
-    public String getTransactionType() {
-        return transactionType;
-    }
-    
-    public Integer getQuantity() {
-        return quantity;
-    }
-    
-    public LocalDateTime getTransactionDate() {
-        return transactionDate;
-    }
-    
-    public BigDecimal getUnitPrice() {
-        return unitPrice;
-    }
-    
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
-    
-    public String getNotes() {
-        return notes;
-    }
-    
-    public Long getUserId() {
-        return userId;
-    }
-    
-    public String getUserName() {
-        return userName;
-    }
-    
-    public String getReferenceNumber() {
-        return referenceNumber;
-    }
-    
-    // Setters
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public void setProductId(Long productId) {
-        this.productId = productId;
-    }
-    
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
-    
-    public void setTransactionType(String transactionType) {
-        this.transactionType = transactionType;
-    }
-    
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-    
-    public void setTransactionDate(LocalDateTime transactionDate) {
-        this.transactionDate = transactionDate;
-    }
-    
-    public void setUnitPrice(BigDecimal unitPrice) {
-        this.unitPrice = unitPrice;
-    }
-    
-    public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
-    }
-    
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
-    
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-    
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-    
-    public void setReferenceNumber(String referenceNumber) {
-        this.referenceNumber = referenceNumber;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getProductId() { return productId; }
+    public void setProductId(Long productId) { this.productId = productId; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+    public String getTransactionType() { return transactionType; }
+    public void setTransactionType(String transactionType) { this.transactionType = transactionType; }
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public LocalDateTime getTransactionDate() { return transactionDate; }
+    public void setTransactionDate(LocalDateTime transactionDate) { this.transactionDate = transactionDate; }
+    public BigDecimal getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
+    public BigDecimal getTotalAmount() { return totalAmount; }
+    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+    public String getReferenceNumber() { return referenceNumber; }
+    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
 }

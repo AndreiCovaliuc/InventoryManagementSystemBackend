@@ -1,6 +1,7 @@
 package com.example.inventory_backend.repository;
 
 import com.example.inventory_backend.model.Chat;
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +21,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
     
     @Query("SELECT c FROM Chat c WHERE :user1 MEMBER OF c.participants AND :user2 MEMBER OF c.participants")
     List<Chat> findByTwoParticipants(@Param("user1") User user1, @Param("user2") User user2);
+    
+    List<Chat> findByCompany(Company company);
+    List<Chat> findByCompanyId(Long companyId);
 }

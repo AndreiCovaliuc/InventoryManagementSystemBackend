@@ -2,34 +2,58 @@ package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.dto.*;
 import com.example.inventory_backend.model.User;
-import com.example.inventory_backend.security.UserDetailsImpl;
+import com.example.inventory_backend.repository.UserRepository;
+import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.ChatService;
-import com.example.inventory_backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/chat")
-@CrossOrigin(origins = "http://localhost:3000", methods = {
-    RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS
-})
+@RequestMapping("/api/chats")
+@CrossOrigin(origins = "http://localhost:3000")
 public class ChatController {
 
     @Autowired
     private ChatService chatService;
     
     @Autowired
-    private UserService userService;
+    private UserRepository userRepository;
     
+    private User getCurrentUser() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDTO>> getAvailableUsers() {
+        User currentUser = getCurrentUser();
+        
+        // Get all users from the same company except the current user
+        List<User> companyUsers = userRepository.findByCompanyId(currentUser.getCompany().getId());
+        
+        List<UserDTO> availableUsers = companyUsers.stream()
+                .filter(user -> !user.getId().equals(currentUser.getId()))
+                .map(user -> {
+                    UserDTO dto = new UserDTO();
+                    dto.setId(user.getId());
+                    dto.setName(user.getName());
+                    dto.setEmail(user.getEmail());
+                    dto.setRole(user.getRole().name());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(availableUsers);
+    }
+
     @GetMapping
-    public ResponseEntity<List<ChatDTO>> getAllChats() {
+    public ResponseEntity<List<ChatDTO>> getAllUserChats() {
         User currentUser = getCurrentUser();
         List<ChatDTO> chats = chatService.getAllUserChats(currentUser);
         return ResponseEntity.ok(chats);
@@ -38,81 +62,71 @@ public class ChatController {
     @GetMapping("/recent")
     public ResponseEntity<List<ChatDTO>> getRecentChats() {
         User currentUser = getCurrentUser();
-        List<ChatDTO> recentChats = chatService.getRecentChats(currentUser);
-        return ResponseEntity.ok(recentChats);
-    }
-    
-    @GetMapping("/unread-count")
-    public ResponseEntity<Map<String, Integer>> getUnreadCount() {
-        User currentUser = getCurrentUser();
-        int unreadCount = chatService.countUnreadMessages(currentUser);
-        return ResponseEntity.ok(Map.of("count", unreadCount));
+        List<ChatDTO> chats = chatService.getRecentChats(currentUser);
+        return ResponseEntity.ok(chats);
     }
     
     @GetMapping("/{chatId}")
     public ResponseEntity<ChatDTO> getChatById(@PathVariable Long chatId) {
-        User currentUser = getCurrentUser();
-        ChatDTO chat = chatService.getChatById(chatId, currentUser);
-        return ResponseEntity.ok(chat);
+        try {
+            User currentUser = getCurrentUser();
+            ChatDTO chat = chatService.getChatById(chatId, currentUser);
+            return ResponseEntity.ok(chat);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
     
     @GetMapping("/{chatId}/messages")
     public ResponseEntity<List<ChatMessageDTO>> getChatMessages(@PathVariable Long chatId) {
-        User currentUser = getCurrentUser();
-        List<ChatMessageDTO> messages = chatService.getChatMessages(chatId, currentUser);
-        return ResponseEntity.ok(messages);
+        try {
+            User currentUser = getCurrentUser();
+            List<ChatMessageDTO> messages = chatService.getChatMessages(chatId, currentUser);
+            return ResponseEntity.ok(messages);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
     
     @PostMapping("/{chatId}/messages")
     public ResponseEntity<ChatMessageDTO> sendMessage(
-            @PathVariable Long chatId,
+            @PathVariable Long chatId, 
             @RequestBody SendMessageRequestDTO request) {
-        User currentUser = getCurrentUser();
-        ChatMessageDTO message = chatService.sendMessage(chatId, request.getContent(), currentUser);
-        return ResponseEntity.ok(message);
+        try {
+            User currentUser = getCurrentUser();
+            ChatMessageDTO message = chatService.sendMessage(chatId, request.getContent(), currentUser);
+            return new ResponseEntity<>(message, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
     
     @PutMapping("/{chatId}/read")
-    public ResponseEntity<?> markChatAsRead(@PathVariable Long chatId) {
+    public ResponseEntity<Void> markChatAsRead(@PathVariable Long chatId) {
+        try {
+            User currentUser = getCurrentUser();
+            chatService.markChatAsRead(chatId, currentUser);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
+    @GetMapping("/unread-count")
+    public ResponseEntity<Integer> getUnreadCount() {
         User currentUser = getCurrentUser();
-        chatService.markChatAsRead(chatId, currentUser);
-        return ResponseEntity.ok().build();
+        int count = chatService.countUnreadMessages(currentUser);
+        return ResponseEntity.ok(count);
     }
     
     @PostMapping
     public ResponseEntity<ChatDTO> createChat(@RequestBody CreateChatRequestDTO request) {
-        User currentUser = getCurrentUser();
-        ChatDTO chat = chatService.createNewChat(currentUser, request.getParticipantId());
-        return ResponseEntity.ok(chat);
-    }
-    
-    // New endpoint to get available users for chat
-    @GetMapping("/users")
-    public ResponseEntity<List<UserDTO>> getAvailableChatUsers() {
-        // Return all active users except the current user
-        User currentUser = getCurrentUser();
-        List<User> users = userService.getAllUsers()
-            .stream()
-            .filter(user -> !user.getId().equals(currentUser.getId()))
-            .collect(Collectors.toList());
-            
-        return ResponseEntity.ok(users.stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList()));
-    }
-    
-    private User getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        return userService.getUserById(userDetails.getId());
-    }
-    
-    private UserDTO convertToDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole().name());
-        return dto;
+        try {
+            User currentUser = getCurrentUser();
+            ChatDTO chat = chatService.createNewChat(currentUser, request.getParticipantId());
+            return new ResponseEntity<>(chat, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

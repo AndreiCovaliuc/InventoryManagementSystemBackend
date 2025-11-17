@@ -34,4 +34,3 @@ public class ChatMessage {
         timestamp = LocalDateTime.now();
     }
 }
-

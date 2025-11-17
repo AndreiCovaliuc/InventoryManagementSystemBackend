@@ -23,12 +23,11 @@ public class JwtUtils {
     @Value("${app.jwtSecret:myVerySecretKey123456789012345678901234567890}")
     private String jwtSecret;
 
-    @Value("${app.jwtExpirationMs:86400000}") // Default to 24 hours
+    @Value("${app.jwtExpirationMs:86400000}")
     private int jwtExpirationMs;
 
     public String generateJwtToken(Authentication authentication) {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-        
         
         return Jwts.builder()
                 .setSubject((userPrincipal.getEmail())) 

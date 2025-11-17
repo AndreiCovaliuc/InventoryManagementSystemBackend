@@ -1,43 +1,33 @@
 package com.example.inventory_backend.controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/test")
 @CrossOrigin(origins = "http://localhost:3000")
 public class TestController {
-
+    
     @GetMapping("/public")
-    public Map<String, String> publicEndpoint() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Public content accessible without authentication");
-        return response;
+    public String publicAccess() {
+        return "Public Content.";
     }
     
     @GetMapping("/user")
-    public Map<String, String> userEndpoint() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "User content accessible by authenticated users");
-        return response;
+    @PreAuthorize("hasRole('EMPLOYEE') or hasRole('MANAGER') or hasRole('ADMIN')")
+    public String userAccess() {
+        return "User Content.";
     }
     
     @GetMapping("/manager")
-    public Map<String, String> managerEndpoint() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Manager content accessible by users with MANAGER role");
-        return response;
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public String managerAccess() {
+        return "Manager Board.";
     }
     
     @GetMapping("/admin")
-    public Map<String, String> adminEndpoint() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Admin content accessible by users with ADMIN role");
-        return response;
+    @PreAuthorize("hasRole('ADMIN')")
+    public String adminAccess() {
+        return "Admin Board.";
     }
 }

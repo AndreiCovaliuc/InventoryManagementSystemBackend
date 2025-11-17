@@ -1,17 +1,14 @@
 package com.example.inventory_backend.controller;
 
-import com.example.inventory_backend.model.Product;
-import com.example.inventory_backend.service.InventoryService;
-import com.example.inventory_backend.service.ProductService;
-import com.example.inventory_backend.service.CategoryService;
-import com.example.inventory_backend.service.SupplierService;
-
+import com.example.inventory_backend.dto.InventoryHistoryDTO;
+import com.example.inventory_backend.model.Company;
+import com.example.inventory_backend.model.Inventory;
+import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.security.SecurityUtils;
+import com.example.inventory_backend.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,57 +20,51 @@ import java.util.Map;
 public class StatsController {
 
     @Autowired
-    private InventoryService inventoryService;
-    
-    @Autowired
     private ProductService productService;
-    
+
     @Autowired
     private CategoryService categoryService;
-    
+
     @Autowired
     private SupplierService supplierService;
+
+    @Autowired
+    private InventoryService inventoryService;
+
+    @Autowired
+    private InventoryHistoryService historyService;
     
-    @GetMapping("/previous")
-    public ResponseEntity<Map<String, Object>> getPreviousStats() {
+    @Autowired
+    private CompanyRepository companyRepository;
+    
+    private Company getCurrentCompany() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<Map<String, Object>> getSummaryStats() {
+        Company company = getCurrentCompany();
+        
         Map<String, Object> stats = new HashMap<>();
+        stats.put("totalProducts", productService.getAllProducts(company).size());
+        stats.put("totalCategories", categoryService.getAllCategories(company).size());
+        stats.put("totalSuppliers", supplierService.getAllSuppliers(company).size());
+        stats.put("lowStockItems", inventoryService.getLowStockItems(company).size());
         
-        // Get current counts
-        List<Product> products = productService.getAllProducts();
-        int productCount = products.size();
-        int categoryCount = categoryService.getAllCategories().size();
-        int supplierCount = supplierService.getAllSuppliers().size();
-        int lowStockCount = inventoryService.getLowStockItems().size();
-        
-        // Calculate total quantity
-        int totalQuantity = inventoryService.getAllInventory().stream()
-                .mapToInt(inventory -> inventory.getQuantity())
+        int totalInventory = inventoryService.getAllInventory(company).stream()
+                .mapToInt(Inventory::getQuantity)
                 .sum();
-        
-        // Calculate "previous" values with more logical rules
-        int prevProductCount = Math.max(1, (int)(productCount * 0.9));  // Ensure at least 1 if current > 0
-        int prevCategoryCount = Math.max(1, (int)(categoryCount * 0.95));
-        int prevSupplierCount = Math.max(1, (int)(supplierCount * 0.97));
-        
-        // For low stock, more is worse, so previous should be higher if current > 0
-        int prevLowStockCount;
-        if (lowStockCount == 0) {
-            // If current is 0, previous could have been 1 or 2
-            prevLowStockCount = 2;
-        } else {
-            // If current > 0, previous was somewhat higher (between 10-20% higher)
-            prevLowStockCount = (int)Math.ceil(lowStockCount * 1.15);
-        }
-        
-        // Total quantity should show growth
-        int prevTotalQuantity = Math.max(1, (int)(totalQuantity * 0.93));
-        
-        stats.put("productCount", prevProductCount);
-        stats.put("categoryCount", prevCategoryCount);
-        stats.put("supplierCount", prevSupplierCount);
-        stats.put("lowStockCount", prevLowStockCount);
-        stats.put("totalQuantity", prevTotalQuantity);
+        stats.put("totalInventoryValue", totalInventory);
         
         return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/inventory-history")
+    public ResponseEntity<List<InventoryHistoryDTO>> getInventoryHistory() {
+        Company company = getCurrentCompany();
+        List<InventoryHistoryDTO> history = historyService.getRecentHistory(company);
+        return ResponseEntity.ok(history);
     }
 }

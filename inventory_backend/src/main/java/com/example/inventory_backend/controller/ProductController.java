@@ -1,10 +1,12 @@
-// ProductController.java
 package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.dto.ProductDTO;
 import com.example.inventory_backend.model.Category;
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Product;
 import com.example.inventory_backend.model.Supplier;
+import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.CategoryService;
 import com.example.inventory_backend.service.NotificationService;
 import com.example.inventory_backend.service.ProductService;
@@ -26,6 +28,12 @@ public class ProductController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final SupplierService supplierService;
+    
+    @Autowired
+    private CompanyRepository companyRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     public ProductController(ProductService productService, CategoryService categoryService, SupplierService supplierService) {
@@ -33,19 +41,25 @@ public class ProductController {
         this.categoryService = categoryService;
         this.supplierService = supplierService;
     }
-    @Autowired
-    private NotificationService notificationService;
+    
+    private Company getCurrentCompany() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+    }
     
     @GetMapping
     public List<ProductDTO> getAllProducts() {
-        List<Product> products = productService.getAllProducts();
+        Company company = getCurrentCompany();
+        List<Product> products = productService.getAllProducts(company);
         return products.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
         try {
-            Product product = productService.getProductById(id);
+            Company company = getCurrentCompany();
+            Product product = productService.getProductById(id, company);
             return ResponseEntity.ok(convertToDTO(product));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -55,7 +69,8 @@ public class ProductController {
     @GetMapping("/sku/{sku}")
     public ResponseEntity<ProductDTO> getProductBySku(@PathVariable String sku) {
         try {
-            Product product = productService.getProductBySku(sku);
+            Company company = getCurrentCompany();
+            Product product = productService.getProductBySku(sku, company);
             return ResponseEntity.ok(convertToDTO(product));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -64,8 +79,9 @@ public class ProductController {
     
     @GetMapping("/category/{categoryId}")
     public List<ProductDTO> getProductsByCategory(@PathVariable Long categoryId) {
-        Category category = categoryService.getCategoryById(categoryId);
-        return productService.getProductsByCategory(category)
+        Company company = getCurrentCompany();
+        Category category = categoryService.getCategoryById(categoryId, company);
+        return productService.getProductsByCategory(category, company)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -73,8 +89,9 @@ public class ProductController {
     
     @GetMapping("/supplier/{supplierId}")
     public List<ProductDTO> getProductsBySupplier(@PathVariable Long supplierId) {
-        Supplier supplier = supplierService.getSupplierById(supplierId);
-        return productService.getProductsBySupplier(supplier)
+        Company company = getCurrentCompany();
+        Supplier supplier = supplierService.getSupplierById(supplierId, company);
+        return productService.getProductsBySupplier(supplier, company)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -82,7 +99,8 @@ public class ProductController {
     
     @GetMapping("/search")
     public List<ProductDTO> searchProducts(@RequestParam String name) {
-        return productService.searchProductsByName(name)
+        Company company = getCurrentCompany();
+        return productService.searchProductsByName(name, company)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -90,7 +108,8 @@ public class ProductController {
     
     @GetMapping("/price")
     public List<ProductDTO> getProductsByMaxPrice(@RequestParam BigDecimal maxPrice) {
-        return productService.getProductsByMaxPrice(maxPrice)
+        Company company = getCurrentCompany();
+        return productService.getProductsByMaxPrice(maxPrice, company)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -98,10 +117,11 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@RequestBody ProductDTO productDTO) {
-        Product product = convertToEntity(productDTO);
-        Product savedProduct = productService.saveProduct(product);
+        Company company = getCurrentCompany();
+        Product product = convertToEntity(productDTO, company);
+        Product savedProduct = productService.saveProduct(product, company);
 
-        notificationService.notifyNewProduct(savedProduct.getId(), savedProduct.getName());
+        notificationService.notifyNewProduct(savedProduct.getId(), savedProduct.getName(), company);
         
         return new ResponseEntity<>(convertToDTO(savedProduct), HttpStatus.CREATED);
     }
@@ -109,31 +129,29 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
         try {
-            Product existingProduct = productService.getProductById(id);
+            Company company = getCurrentCompany();
+            Product existingProduct = productService.getProductById(id, company);
             
-            // Update product fields
             existingProduct.setName(productDTO.getName());
             existingProduct.setDescription(productDTO.getDescription());
             existingProduct.setPrice(productDTO.getPrice());
             existingProduct.setSku(productDTO.getSku());
             
-            // Update category if provided
             if (productDTO.getCategoryId() != null) {
-                Category category = categoryService.getCategoryById(productDTO.getCategoryId());
+                Category category = categoryService.getCategoryById(productDTO.getCategoryId(), company);
                 existingProduct.setCategory(category);
             } else {
                 existingProduct.setCategory(null);
             }
             
-            // Update supplier if provided
             if (productDTO.getSupplierId() != null) {
-                Supplier supplier = supplierService.getSupplierById(productDTO.getSupplierId());
+                Supplier supplier = supplierService.getSupplierById(productDTO.getSupplierId(), company);
                 existingProduct.setSupplier(supplier);
             } else {
                 existingProduct.setSupplier(null);
             }
             
-            Product updatedProduct = productService.saveProduct(existingProduct);
+            Product updatedProduct = productService.saveProduct(existingProduct, company);
             return ResponseEntity.ok(convertToDTO(updatedProduct));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -143,7 +161,8 @@ public class ProductController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         try {
-            productService.deleteProduct(id);
+            Company company = getCurrentCompany();
+            productService.deleteProduct(id, company);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -171,29 +190,30 @@ public class ProductController {
         return dto;
     }
     
-    private Product convertToEntity(ProductDTO dto) {
+    private Product convertToEntity(ProductDTO dto, Company company) {
         Product product = new Product();
         product.setId(dto.getId());
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setSku(dto.getSku());
         product.setPrice(dto.getPrice());
+        product.setCompany(company);
         
         if (dto.getCategoryId() != null) {
             try {
-                Category category = categoryService.getCategoryById(dto.getCategoryId());
+                Category category = categoryService.getCategoryById(dto.getCategoryId(), company);
                 product.setCategory(category);
             } catch (RuntimeException e) {
-                // Category not found, leave it null
+                // Category not found
             }
         }
         
         if (dto.getSupplierId() != null) {
             try {
-                Supplier supplier = supplierService.getSupplierById(dto.getSupplierId());
+                Supplier supplier = supplierService.getSupplierById(dto.getSupplierId(), company);
                 product.setSupplier(supplier);
             } catch (RuntimeException e) {
-                // Supplier not found, leave it null
+                // Supplier not found
             }
         }
         

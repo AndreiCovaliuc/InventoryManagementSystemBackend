@@ -18,7 +18,6 @@ public class InventoryHistory {
     @Column(nullable = false)
     private Integer totalQuantity;
     
-    // Optional fields to track individual product changes
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
@@ -26,4 +25,8 @@ public class InventoryHistory {
     private Integer quantityChange;
     
     private String changeReason;
+    
+    @ManyToOne
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 }

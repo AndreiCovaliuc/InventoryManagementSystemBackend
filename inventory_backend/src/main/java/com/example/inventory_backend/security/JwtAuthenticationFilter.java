@@ -34,7 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         logger.debug("Processing request: {} {}", method, path);
         
         try {
-            // Skip filter for OPTIONS requests
             if (request.getMethod().equals("OPTIONS")) {
                 logger.debug("Skipping JWT filter for OPTIONS request");
                 filterChain.doFilter(request, response);
@@ -56,10 +55,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 logger.debug("Authentication set in security context. User: {}, Roles: {}", 
                         userDetails.getUsername(), userDetails.getAuthorities());
-            } else if (jwt != null) {
-                logger.warn("JWT token present but invalid for request to: {} {}", method, path);
-            } else {
-                logger.debug("No JWT token found for request to: {} {}", method, path);
             }
         } catch (Exception e) {
             logger.error("Cannot set user authentication for request to {} {}: {}", 
@@ -71,13 +66,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
-        logger.debug("Authorization header: {}", headerAuth != null ? 
-                headerAuth.substring(0, Math.min(20, headerAuth.length())) + "..." : "null");
 
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            String token = headerAuth.substring(7);
-            logger.debug("Token extracted from Authorization header");
-            return token;
+            return headerAuth.substring(7);
         }
 
         return null;

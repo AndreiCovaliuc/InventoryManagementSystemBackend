@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,7 +56,6 @@ public class ChatServiceImpl implements ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found with id: " + chatId));
         
-        // Verify that current user is a participant
         if (!chat.getParticipants().contains(currentUser)) {
             throw new RuntimeException("You are not a participant in this chat");
         }
@@ -70,7 +68,6 @@ public class ChatServiceImpl implements ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found with id: " + chatId));
         
-        // Verify that current user is a participant
         if (!chat.getParticipants().contains(currentUser)) {
             throw new RuntimeException("You are not a participant in this chat");
         }
@@ -87,12 +84,10 @@ public class ChatServiceImpl implements ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found with id: " + chatId));
         
-        // Verify that sender is a participant
         if (!chat.getParticipants().contains(sender)) {
             throw new RuntimeException("You are not a participant in this chat");
         }
         
-        // Create and save the message
         ChatMessage message = new ChatMessage();
         message.setChat(chat);
         message.setSender(sender);
@@ -102,7 +97,6 @@ public class ChatServiceImpl implements ChatService {
         
         ChatMessage savedMessage = chatMessageRepository.save(message);
         
-        // Update chat's updatedAt timestamp
         chat.setUpdatedAt(LocalDateTime.now());
         chatRepository.save(chat);
         
@@ -115,30 +109,24 @@ public class ChatServiceImpl implements ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found with id: " + chatId));
         
-        // Verify that current user is a participant
         if (!chat.getParticipants().contains(currentUser)) {
             throw new RuntimeException("You are not a participant in this chat");
         }
         
-        // Get the latest message in the chat
         ChatMessage latestMessage = chatMessageRepository.findLatestMessageByChat(chat)
                 .orElse(null);
                 
         if (latestMessage == null) {
-            return; // No messages to mark as read
+            return;
         }
         
-        // To this:
         List<ChatParticipant> participants = chatParticipantRepository.findByChatAndUser(chat, currentUser);
-        if (participants.isEmpty()) {
-        throw new RuntimeException("Participant record not found");
+        if (!participants.isEmpty()) {
+            ChatParticipant participant = participants.get(0);
+            participant.setLastReadMessageId(latestMessage.getId());
+            chatParticipantRepository.save(participant);
         }
-// Use the first participant record found
-ChatParticipant participant = participants.get(0);
-        participant.setLastReadMessageId(latestMessage.getId());
-        chatParticipantRepository.save(participant);
         
-        // Mark all messages from other users as read
         List<ChatMessage> unreadMessages = chatMessageRepository.findByChatOrderByTimestampAsc(chat)
                 .stream()
                 .filter(msg -> !msg.getSender().equals(currentUser) && !msg.isRead())
@@ -156,47 +144,44 @@ ChatParticipant participant = participants.get(0);
     }
     
     @Override
-@Transactional
-public ChatDTO createNewChat(User currentUser, Long otherUserId) {
-    User otherUser = userRepository.findById(otherUserId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + otherUserId));
-    
-    // Check if a chat already exists between these users
-    List<Chat> existingChats = chatRepository.findByTwoParticipants(currentUser, otherUser);
-    if (!existingChats.isEmpty()) {
-        return convertToDTO(existingChats.get(0), currentUser);
+    @Transactional
+    public ChatDTO createNewChat(User currentUser, Long otherUserId) {
+        User otherUser = userRepository.findById(otherUserId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + otherUserId));
+        
+        // Verify both users are from the same company
+        if (!currentUser.getCompany().getId().equals(otherUser.getCompany().getId())) {
+            throw new RuntimeException("Cannot create chat with user from different company");
+        }
+        
+        List<Chat> existingChats = chatRepository.findByTwoParticipants(currentUser, otherUser);
+        if (!existingChats.isEmpty()) {
+            return convertToDTO(existingChats.get(0), currentUser);
+        }
+        
+        Chat chat = new Chat();
+        chat.setCompany(currentUser.getCompany());
+        Chat savedChat = chatRepository.save(chat);
+        
+        ChatParticipant currentUserParticipant = new ChatParticipant();
+        currentUserParticipant.setChat(savedChat);
+        currentUserParticipant.setUser(currentUser);
+        chatParticipantRepository.save(currentUserParticipant);
+        
+        ChatParticipant otherUserParticipant = new ChatParticipant();
+        otherUserParticipant.setChat(savedChat);
+        otherUserParticipant.setUser(otherUser);
+        chatParticipantRepository.save(otherUserParticipant);
+        
+        return convertToDTO(savedChat, currentUser);
     }
     
-    // Create a new chat
-    Chat chat = new Chat();
-    Chat savedChat = chatRepository.save(chat);
-    
-    // Create participant records
-    ChatParticipant currentUserParticipant = new ChatParticipant();
-    currentUserParticipant.setChat(savedChat);
-    currentUserParticipant.setUser(currentUser);
-    chatParticipantRepository.save(currentUserParticipant);
-    
-    ChatParticipant otherUserParticipant = new ChatParticipant();
-    otherUserParticipant.setChat(savedChat);
-    otherUserParticipant.setUser(otherUser);
-    chatParticipantRepository.save(otherUserParticipant);
-    
-    // REMOVE THIS LINE - it's causing the duplicate error
-    // chat.getParticipants().add(currentUser);
-    // chat.getParticipants().add(otherUser);
-    
-    return convertToDTO(savedChat, currentUser);
-}
-    
-    // Helper methods for DTO conversion
     private ChatDTO convertToDTO(Chat chat, User currentUser) {
         ChatDTO dto = new ChatDTO();
         dto.setId(chat.getId());
         dto.setCreatedAt(chat.getCreatedAt());
         dto.setUpdatedAt(chat.getUpdatedAt());
         
-        // Set the other participant
         User otherParticipant = chat.getParticipants().stream()
                 .filter(user -> !user.equals(currentUser))
                 .findFirst()
@@ -208,13 +193,9 @@ public ChatDTO createNewChat(User currentUser, Long otherUserId) {
             otherParticipantDTO.setName(otherParticipant.getName());
             otherParticipantDTO.setEmail(otherParticipant.getEmail());
             otherParticipantDTO.setRole(otherParticipant.getRole().name());
-            // Comment out or remove the line causing the error
-            // otherParticipantDTO.setOnline(false);
-            
             dto.setOtherParticipant(otherParticipantDTO);
         }
         
-        // Get the latest message if any
         ChatMessage latestMessage = chatMessageRepository.findLatestMessageByChat(chat)
                 .orElse(null);
                 
@@ -222,7 +203,6 @@ public ChatDTO createNewChat(User currentUser, Long otherUserId) {
             dto.setLastMessage(convertToMessageDTO(latestMessage));
         }
         
-        // Count unread messages to determine if this chat has unread messages
         int unreadCount = chatMessageRepository.countUnreadMessagesByChat(chat, currentUser);
         dto.setHasUnread(unreadCount > 0);
         

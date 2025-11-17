@@ -1,5 +1,6 @@
 package com.example.inventory_backend.service.impl;
 
+import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Supplier;
 import com.example.inventory_backend.repository.SupplierRepository;
 import com.example.inventory_backend.service.SupplierService;
@@ -19,28 +20,36 @@ public class SupplierServiceImpl implements SupplierService {
     }
     
     @Override
-    public List<Supplier> getAllSuppliers() {
-        return supplierRepository.findAll();
+    public List<Supplier> getAllSuppliers(Company company) {
+        return supplierRepository.findByCompany(company);
     }
     
     @Override
-    public Supplier getSupplierById(Long id) {
-        return supplierRepository.findById(id)
+    public Supplier getSupplierById(Long id, Company company) {
+        Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + id));
+        
+        if (!supplier.getCompany().getId().equals(company.getId())) {
+            throw new RuntimeException("Supplier not found with id: " + id);
+        }
+        
+        return supplier;
     }
     
     @Override
-    public List<Supplier> searchSuppliersByName(String name) {
-        return supplierRepository.findByNameContainingIgnoreCase(name);
+    public List<Supplier> searchSuppliersByName(String name, Company company) {
+        return supplierRepository.findByNameContainingIgnoreCaseAndCompany(name, company);
     }
     
     @Override
-    public Supplier saveSupplier(Supplier supplier) {
+    public Supplier saveSupplier(Supplier supplier, Company company) {
+        supplier.setCompany(company);
         return supplierRepository.save(supplier);
     }
     
     @Override
-    public void deleteSupplier(Long id) {
-        supplierRepository.deleteById(id);
+    public void deleteSupplier(Long id, Company company) {
+        Supplier supplier = getSupplierById(id, company);
+        supplierRepository.deleteById(supplier.getId());
     }
 }
