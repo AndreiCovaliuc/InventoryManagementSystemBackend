@@ -18,6 +18,7 @@ public interface InventoryHistoryRepository extends JpaRepository<InventoryHisto
     
     // Company-scoped queries
     List<InventoryHistory> findTop30ByCompanyOrderByTimestampDesc(Company company);
+    List<InventoryHistory> findTop100ByCompanyOrderByTimestampDesc(Company company);
     List<InventoryHistory> findByTimestampBetweenAndCompany(LocalDateTime start, LocalDateTime end, Company company);
     List<InventoryHistory> findByCompany(Company company);
     List<InventoryHistory> findByCompanyId(Long companyId);

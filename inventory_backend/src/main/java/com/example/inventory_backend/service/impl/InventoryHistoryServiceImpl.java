@@ -54,10 +54,10 @@ public class InventoryHistoryServiceImpl implements InventoryHistoryService {
     
     @Override
     public List<InventoryHistoryDTO> getRecentHistory(Company company) {
-        List<InventoryHistory> history = historyRepository.findTop30ByCompanyOrderByTimestampDesc(company);
-        
+        List<InventoryHistory> history = historyRepository.findTop100ByCompanyOrderByTimestampDesc(company);
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        
+
         return history.stream()
                 .map(item -> {
                     InventoryHistoryDTO dto = new InventoryHistoryDTO();
@@ -65,6 +65,16 @@ public class InventoryHistoryServiceImpl implements InventoryHistoryService {
                     dto.setTimestamp(item.getTimestamp());
                     dto.setTotalQuantity(item.getTotalQuantity());
                     dto.setFormattedTimestamp(item.getTimestamp().format(formatter));
+                    dto.setQuantityChange(item.getQuantityChange());
+                    dto.setChangeReason(item.getChangeReason());
+
+                    // Include product information if available
+                    if (item.getProduct() != null) {
+                        dto.setProductId(item.getProduct().getId());
+                        dto.setProductName(item.getProduct().getName());
+                        dto.setProductSku(item.getProduct().getSku());
+                    }
+
                     return dto;
                 })
                 .collect(Collectors.toList());

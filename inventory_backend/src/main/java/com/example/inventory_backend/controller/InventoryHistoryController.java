@@ -34,7 +34,14 @@ public class InventoryHistoryController {
         List<InventoryHistoryDTO> history = historyService.getRecentHistory(company);
         return ResponseEntity.ok(history);
     }
-    
+
+    @GetMapping("/recent")
+    public ResponseEntity<List<InventoryHistoryDTO>> getRecentHistoryAlias() {
+        Company company = getCurrentCompany();
+        List<InventoryHistoryDTO> history = historyService.getRecentHistory(company);
+        return ResponseEntity.ok(history);
+    }
+
     @PostMapping("/record")
     public ResponseEntity<Void> recordCurrentState() {
         Company company = getCurrentCompany();
