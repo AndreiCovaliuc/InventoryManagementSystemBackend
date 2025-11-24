@@ -1,0 +1,6 @@
+com\example\inventory_backend\service\impl\TransactionServiceImpl$1.class
+com\example\inventory_backend\service\EntityBroadcastService.class
+com\example\inventory_backend\model\User.class
+com\example\inventory_backend\InventoryBackendApplication.class
+com\example\inventory_backend\model\User$Role.class
+com\example\inventory_backend\repository\UserRepository.class
