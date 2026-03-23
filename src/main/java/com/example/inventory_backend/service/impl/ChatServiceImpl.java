@@ -15,8 +15,12 @@ import com.example.inventory_backend.service.ChatService;
 import com.example.inventory_backend.service.EncryptionService;
 import com.example.inventory_backend.service.UserPresenceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +46,9 @@ public class ChatServiceImpl implements ChatService {
 
     @Autowired
     private UserPresenceService userPresenceService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
     
     @Override
     public List<ChatDTO> getAllUserChats(User currentUser) {
@@ -105,11 +112,27 @@ public class ChatServiceImpl implements ChatService {
         message.setRead(false);
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
-        
+
         chat.setUpdatedAt(LocalDateTime.now());
         chatRepository.save(chat);
-        
-        return convertToMessageDTO(savedMessage);
+
+        ChatMessageDTO messageDTO = convertToMessageDTO(savedMessage);
+
+        // Broadcast message to chat topic for real-time delivery
+        messagingTemplate.convertAndSend("/topic/chat/" + chatId, messageDTO);
+
+        // Broadcast unread count update to each participant (except sender)
+        for (User participant : chat.getParticipants()) {
+            if (!participant.getId().equals(sender.getId())) {
+                int unreadCount = chatMessageRepository.countTotalUnreadMessages(participant);
+                Map<String, Object> unreadUpdate = new HashMap<>();
+                unreadUpdate.put("unreadCount", unreadCount);
+                unreadUpdate.put("chatId", chatId);
+                messagingTemplate.convertAndSend("/topic/chat/unread/" + participant.getId(), unreadUpdate);
+            }
+        }
+
+        return messageDTO;
     }
     
     @Override
@@ -145,6 +168,13 @@ public class ChatServiceImpl implements ChatService {
             message.setRead(true);
             chatMessageRepository.save(message);
         }
+
+        // Broadcast updated unread count to the user who marked as read
+        int unreadCount = chatMessageRepository.countTotalUnreadMessages(currentUser);
+        Map<String, Object> unreadUpdate = new HashMap<>();
+        unreadUpdate.put("unreadCount", unreadCount);
+        unreadUpdate.put("chatId", chatId);
+        messagingTemplate.convertAndSend("/topic/chat/unread/" + currentUser.getId(), unreadUpdate);
     }
     
     @Override
