@@ -23,6 +23,16 @@ public class UserServiceImpl implements UserService {
     public List<User> getAllUsers(Company company) {
         return userRepository.findByCompany(company);
     }
+
+    @Override
+    public List<User> getUsersByCompanyId(Long companyId) {
+        return userRepository.findByCompanyId(companyId);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.findByEmail(email).isPresent();
+    }
     
     @Override
     public User getUserById(Long id) {

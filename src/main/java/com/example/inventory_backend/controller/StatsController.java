@@ -5,8 +5,6 @@ import com.example.inventory_backend.dto.StatsSnapshotDTO;
 import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Inventory;
 import com.example.inventory_backend.model.StatsSnapshot;
-import com.example.inventory_backend.repository.CompanyRepository;
-import com.example.inventory_backend.repository.StatsSnapshotRepository;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +15,6 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/stats")
@@ -40,15 +37,13 @@ public class StatsController {
     private InventoryHistoryService historyService;
 
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyService companyService;
 
     @Autowired
-    private StatsSnapshotRepository statsSnapshotRepository;
+    private StatsSnapshotService statsSnapshotService;
 
     private Company getCurrentCompany() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyService.getCompanyById(SecurityUtils.getCurrentCompanyId());
     }
 
     @GetMapping("/summary")
@@ -79,62 +74,29 @@ public class StatsController {
     @GetMapping("/previous")
     public ResponseEntity<StatsSnapshotDTO> getPreviousStats() {
         Company company = getCurrentCompany();
-        LocalDate today = LocalDate.now();
-
-        // Try to get yesterday's snapshot first
-        Optional<StatsSnapshot> snapshot = statsSnapshotRepository
-                .findTopByCompanyAndSnapshotDateBeforeOrderBySnapshotDateDesc(company, today);
-
-        if (snapshot.isEmpty()) {
-            // No previous data available
-            return ResponseEntity.noContent().build();
-        }
-
-        StatsSnapshotDTO dto = convertToDTO(snapshot.get());
-        return ResponseEntity.ok(dto);
+        return statsSnapshotService.getPreviousSnapshot(company)
+                .map(s -> ResponseEntity.ok(convertToDTO(s)))
+                .orElse(ResponseEntity.noContent().build());
     }
 
     @PostMapping("/snapshot")
     public ResponseEntity<StatsSnapshotDTO> recordCurrentSnapshot() {
         Company company = getCurrentCompany();
-        LocalDate today = LocalDate.now();
-
-        // Check if snapshot already exists for today
-        if (statsSnapshotRepository.existsByCompanyAndSnapshotDate(company, today)) {
-            // Update existing snapshot
-            Optional<StatsSnapshot> existing = statsSnapshotRepository
-                    .findByCompanyAndSnapshotDate(company, today);
-            if (existing.isPresent()) {
-                StatsSnapshot snapshot = existing.get();
-                updateSnapshotData(snapshot, company);
-                statsSnapshotRepository.save(snapshot);
-                return ResponseEntity.ok(convertToDTO(snapshot));
-            }
-        }
-
-        // Create new snapshot
         StatsSnapshot snapshot = new StatsSnapshot();
         snapshot.setCompany(company);
-        snapshot.setSnapshotDate(today);
+        snapshot.setSnapshotDate(LocalDate.now());
         updateSnapshotData(snapshot, company);
-        statsSnapshotRepository.save(snapshot);
-
-        return ResponseEntity.ok(convertToDTO(snapshot));
+        StatsSnapshot saved = statsSnapshotService.saveOrUpdateTodaySnapshot(company, snapshot);
+        return ResponseEntity.ok(convertToDTO(saved));
     }
 
     @GetMapping("/history")
     public ResponseEntity<List<StatsSnapshotDTO>> getStatsHistory() {
         Company company = getCurrentCompany();
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(30);
-
-        List<StatsSnapshot> snapshots = statsSnapshotRepository
-                .findByCompanyAndSnapshotDateBetweenOrderBySnapshotDateAsc(company, startDate, endDate);
-
-        List<StatsSnapshotDTO> dtos = snapshots.stream()
-                .map(this::convertToDTO)
-                .toList();
-
+        List<StatsSnapshotDTO> dtos = statsSnapshotService
+                .getSnapshotHistory(company, endDate.minusDays(30), endDate)
+                .stream().map(this::convertToDTO).toList();
         return ResponseEntity.ok(dtos);
     }
 

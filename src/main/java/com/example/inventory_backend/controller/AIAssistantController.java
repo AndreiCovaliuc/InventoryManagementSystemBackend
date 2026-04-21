@@ -3,9 +3,9 @@ package com.example.inventory_backend.controller;
 import com.example.inventory_backend.dto.AIQueryRequest;
 import com.example.inventory_backend.dto.AIQueryResponse;
 import com.example.inventory_backend.model.User;
-import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.AIAssistantService;
+import com.example.inventory_backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +19,10 @@ public class AIAssistantController {
     private AIAssistantService aiAssistantService;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     private User getCurrentUser() {
-        Long userId = SecurityUtils.getCurrentUserId();
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        return userService.getUserById(SecurityUtils.getCurrentUserId());
     }
 
     @PostMapping("/ask")

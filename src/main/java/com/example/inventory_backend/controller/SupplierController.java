@@ -3,7 +3,7 @@ package com.example.inventory_backend.controller;
 import com.example.inventory_backend.dto.SupplierDTO;
 import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Supplier;
-import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.service.CompanyService;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.EntityBroadcastService;
 import com.example.inventory_backend.service.NotificationService;
@@ -24,7 +24,7 @@ public class SupplierController {
     private final SupplierService supplierService;
 
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyService companyService;
 
     @Autowired
     public SupplierController(SupplierService supplierService) {
@@ -39,8 +39,7 @@ public class SupplierController {
     
     private Company getCurrentCompany() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyService.getCompanyById(companyId);
     }
 
     @GetMapping

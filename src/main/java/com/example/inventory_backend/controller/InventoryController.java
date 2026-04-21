@@ -4,7 +4,7 @@ import com.example.inventory_backend.dto.InventoryDTO;
 import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.Inventory;
 import com.example.inventory_backend.model.Product;
-import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.service.CompanyService;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.EntityBroadcastService;
 import com.example.inventory_backend.service.InventoryService;
@@ -26,7 +26,7 @@ public class InventoryController {
     private final ProductService productService;
 
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyService companyService;
 
     @Autowired
     private EntityBroadcastService broadcastService;
@@ -39,8 +39,7 @@ public class InventoryController {
     
     private Company getCurrentCompany() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyService.getCompanyById(companyId);
     }
 
     @GetMapping

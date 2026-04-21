@@ -1,7 +1,7 @@
 package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.model.Company;
-import com.example.inventory_backend.repository.CompanyRepository;
+import com.example.inventory_backend.service.CompanyService;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.ExportService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +20,11 @@ public class ExportController {
     private ExportService exportService;
 
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyService companyService;
     
     private Company getCurrentCompany() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyService.getCompanyById(companyId);
     }
 
     @GetMapping("/excel")

@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import com.example.inventory_backend.dto.UserDTO;
 import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.User;
-import com.example.inventory_backend.repository.CompanyRepository;
-import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.security.SecurityUtils;
+import com.example.inventory_backend.service.CompanyService;
 import com.example.inventory_backend.service.NotificationService;
+import com.example.inventory_backend.service.UserService;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -22,27 +22,25 @@ import com.example.inventory_backend.service.NotificationService;
 public class AdminUserController {
 
     @Autowired
-    private UserRepository userRepository;
-    
+    private UserService userService;
+
     @Autowired
-    private CompanyRepository companyRepository;
-    
+    private CompanyService companyService;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private NotificationService notificationService;
-    
+
     private Company getCurrentCompany() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyService.getCompanyById(SecurityUtils.getCurrentCompanyId());
     }
 
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         Company company = getCurrentCompany();
-        List<User> users = userRepository.findByCompany(company);
+        List<User> users = userService.getAllUsers(company);
         
         List<UserDTO> userDTOs = users.stream()
                 .map(this::convertToDTO)
@@ -55,8 +53,7 @@ public class AdminUserController {
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         try {
             Company company = getCurrentCompany();
-            User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            User user = userService.getUserById(id);
             
             // Verify user belongs to same company
             if (!user.getCompany().getId().equals(company.getId())) {
@@ -78,8 +75,7 @@ public class AdminUserController {
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UserDTO userDTO) {
         try {
             Company company = getCurrentCompany();
-            User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            User existingUser = userService.getUserById(id);
             
             // Verify user belongs to same company
             if (!existingUser.getCompany().getId().equals(company.getId())) {
@@ -97,20 +93,19 @@ public class AdminUserController {
                 existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
             }
             
-            User updatedUser = userRepository.save(existingUser);
-            
+            User updatedUser = userService.createUser(existingUser);
+
             return ResponseEntity.ok(convertToDTO(updatedUser));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error updating user: " + e.getMessage());
         }
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             Company company = getCurrentCompany();
-            User user = userRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            User user = userService.getUserById(id);
             
             // Verify user belongs to same company
             if (!user.getCompany().getId().equals(company.getId())) {
@@ -122,7 +117,7 @@ public class AdminUserController {
                 return ResponseEntity.badRequest().body("Cannot delete your own account");
             }
             
-            userRepository.deleteById(id);
+            userService.deleteUser(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error deleting user: " + e.getMessage());
@@ -135,7 +130,7 @@ public class AdminUserController {
             Company company = getCurrentCompany();
             
             // Check if email already exists
-            if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
+            if (userService.existsByEmail(userDTO.getEmail())) {
                 return ResponseEntity.badRequest().body("Email already in use");
             }
             
@@ -153,7 +148,7 @@ public class AdminUserController {
             // CRUCIAL: Assign the new user to the admin's company
             user.setCompany(company);
             
-            User savedUser = userRepository.save(user);
+            User savedUser = userService.createUser(user);
 
             notificationService.notifyNewUser(savedUser.getId(), savedUser.getName(), savedUser.getRole().name(), company);
             

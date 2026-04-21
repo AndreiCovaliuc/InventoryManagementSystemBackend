@@ -2,9 +2,9 @@ package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.dto.*;
 import com.example.inventory_backend.model.User;
-import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.security.SecurityUtils;
 import com.example.inventory_backend.service.ChatService;
+import com.example.inventory_backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,22 +20,20 @@ public class ChatController {
 
     @Autowired
     private ChatService chatService;
-    
+
     @Autowired
-    private UserRepository userRepository;
-    
+    private UserService userService;
+
     private User getCurrentUser() {
-        Long userId = SecurityUtils.getCurrentUserId();
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        return userService.getUserById(SecurityUtils.getCurrentUserId());
     }
 
     @GetMapping("/users")
     public ResponseEntity<List<UserDTO>> getAvailableUsers() {
         User currentUser = getCurrentUser();
-        
+
         // Get all users from the same company except the current user
-        List<User> companyUsers = userRepository.findByCompanyId(currentUser.getCompany().getId());
+        List<User> companyUsers = userService.getUsersByCompanyId(currentUser.getCompany().getId());
         
         List<UserDTO> availableUsers = companyUsers.stream()
                 .filter(user -> !user.getId().equals(currentUser.getId()))

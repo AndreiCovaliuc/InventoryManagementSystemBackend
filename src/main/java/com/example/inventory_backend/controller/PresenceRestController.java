@@ -1,9 +1,9 @@
 package com.example.inventory_backend.controller;
 
 import com.example.inventory_backend.model.User;
-import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.security.UserDetailsImpl;
 import com.example.inventory_backend.service.UserPresenceService;
+import com.example.inventory_backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,13 +22,12 @@ public class PresenceRestController {
     private UserPresenceService userPresenceService;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @GetMapping("/online")
     public ResponseEntity<?> getOnlineUsers(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userService.getUserById(userDetails.getId());
 
         Set<Long> onlineUsers = userPresenceService.getOnlineUsersForCompany(currentUser.getCompany().getId());
 
@@ -38,11 +37,9 @@ public class PresenceRestController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserPresence(@PathVariable Long userId, Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userService.getUserById(userDetails.getId());
 
-        User targetUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Target user not found"));
+        User targetUser = userService.getUserById(userId);
 
         // Verify same company
         if (!currentUser.getCompany().getId().equals(targetUser.getCompany().getId())) {
@@ -60,8 +57,7 @@ public class PresenceRestController {
     @PostMapping("/heartbeat")
     public ResponseEntity<?> heartbeat(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userService.getUserById(userDetails.getId());
 
         userPresenceService.updateHeartbeat(currentUser);
 

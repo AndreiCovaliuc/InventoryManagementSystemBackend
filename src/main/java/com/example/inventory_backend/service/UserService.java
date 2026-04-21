@@ -7,8 +7,10 @@ import java.util.List;
 
 public interface UserService {
     List<User> getAllUsers(Company company);
+    List<User> getUsersByCompanyId(Long companyId);
     User getUserById(Long id);
     User getUserByEmail(String email);
+    boolean existsByEmail(String email);
     User createUser(User user);
     User updateUser(User user);
     void deleteUser(Long id);

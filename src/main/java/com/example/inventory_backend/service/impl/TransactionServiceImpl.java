@@ -84,8 +84,15 @@ public class TransactionServiceImpl implements TransactionService {
             throw new RuntimeException("Product not found with id: " + transactionDTO.getProductId());
         }
         
+        Transaction.TransactionType type = Transaction.TransactionType.valueOf(transactionDTO.getTransactionType());
+        if (type == Transaction.TransactionType.SALE) {
+            if (!inventoryService.isInStock(product.getId(), transactionDTO.getQuantity(), company)) {
+                throw new IllegalArgumentException("Insufficient stock for product: " + product.getName());
+            }
+        }
+
         transaction.setProduct(product);
-        transaction.setType(Transaction.TransactionType.valueOf(transactionDTO.getTransactionType()));
+        transaction.setType(type);
         transaction.setQuantity(transactionDTO.getQuantity());
         transaction.setTransactionDate(transactionDTO.getTransactionDate() != null ? 
                 transactionDTO.getTransactionDate() : LocalDateTime.now());

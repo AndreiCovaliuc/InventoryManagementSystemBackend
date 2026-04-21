@@ -25,10 +25,10 @@ import com.example.inventory_backend.dto.MessageResponse;
 import com.example.inventory_backend.model.Company;
 import com.example.inventory_backend.model.User;
 import com.example.inventory_backend.model.User.Role;
-import com.example.inventory_backend.repository.CompanyRepository;
-import com.example.inventory_backend.repository.UserRepository;
 import com.example.inventory_backend.security.JwtUtils;
 import com.example.inventory_backend.security.UserDetailsImpl;
+import com.example.inventory_backend.service.CompanyService;
+import com.example.inventory_backend.service.UserService;
 
 import jakarta.validation.Valid;
 
@@ -42,10 +42,10 @@ public class AuthController {
     AuthenticationManager authenticationManager;
 
     @Autowired
-    UserRepository userRepository;
-    
+    UserService userService;
+
     @Autowired
-    CompanyRepository companyRepository;
+    CompanyService companyService;
 
     @Autowired
     PasswordEncoder encoder;
@@ -80,28 +80,28 @@ public class AuthController {
         logger.info("Company registration attempt: {} (CUI: {})", request.getCompanyName(), request.getCui());
         
         // Check if CUI already exists
-        if (companyRepository.existsByCui(request.getCui())) {
+        if (companyService.existsByCui(request.getCui())) {
             logger.warn("Registration failed: CUI already in use - {}", request.getCui());
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: A company with this CUI already exists!"));
         }
-        
+
         // Check if admin email already exists
-        if (userRepository.findByEmail(request.getAdminEmail()).isPresent()) {
+        if (userService.existsByEmail(request.getAdminEmail())) {
             logger.warn("Registration failed: Email already in use - {}", request.getAdminEmail());
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
-        
+
         // Create the company
         Company company = new Company();
         company.setName(request.getCompanyName());
         company.setCui(request.getCui());
-        Company savedCompany = companyRepository.save(company);
+        Company savedCompany = companyService.saveCompany(company);
         logger.info("Company created: {} (ID: {})", savedCompany.getName(), savedCompany.getId());
-        
+
         // Create the admin user for this company
         User adminUser = new User();
         adminUser.setName(request.getAdminName());
@@ -109,8 +109,8 @@ public class AuthController {
         adminUser.setPassword(encoder.encode(request.getPassword()));
         adminUser.setRole(Role.ADMIN);
         adminUser.setCompany(savedCompany);
-        
-        userRepository.save(adminUser);
+
+        userService.createUser(adminUser);
         logger.info("Admin user created for company {}: {}", savedCompany.getName(), adminUser.getEmail());
         
         return ResponseEntity.ok(new MessageResponse("Company registered successfully! You can now login with your admin credentials."));
