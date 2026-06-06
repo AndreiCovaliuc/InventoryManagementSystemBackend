@@ -18,7 +18,6 @@ import com.example.inventory_backend.service.UserService;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminUserController {
 
     @Autowired

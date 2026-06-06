@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/export")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ExportController {
 
     @Autowired
