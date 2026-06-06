@@ -2,6 +2,8 @@ package com.example.inventory_backend.service;
 
 import com.example.inventory_backend.model.User;
 import com.example.inventory_backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserPresenceService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserPresenceService.class);
 
     // Track online users by their ID
     private final Set<Long> onlineUsers = ConcurrentHashMap.newKeySet();
@@ -87,8 +91,13 @@ public class UserPresenceService {
             "timestamp", LocalDateTime.now().toString()
         );
 
+        String destination = "/topic/presence/" + companyId;
+        logger.info("Presence broadcast -> {} | userId={} online={} (currently online in company: {})",
+                destination, userId, online,
+                companyUsers.getOrDefault(companyId, Set.of()));
+
         // Broadcast to all users in the same company
-        messagingTemplate.convertAndSend("/topic/presence/" + companyId, presenceUpdate);
+        messagingTemplate.convertAndSend(destination, presenceUpdate);
     }
 
     public void updateHeartbeat(User user) {
