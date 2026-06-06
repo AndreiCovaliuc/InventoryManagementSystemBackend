@@ -56,7 +56,7 @@ public class ExportService {
                 row.createCell(6).setCellValue(product.getSupplier() != null ? product.getSupplier().getName() : "");
             }
             for (int i = 0; i < productColumns.length; i++) {
-                productsSheet.autoSizeColumn(i);
+                productsSheet.setColumnWidth(i, 5120);
             }
             
             // Categories Sheet
@@ -78,7 +78,7 @@ public class ExportService {
                 row.createCell(3).setCellValue(category.getProducts() != null ? category.getProducts().size() : 0);
             }
             for (int i = 0; i < categoryColumns.length; i++) {
-                categoriesSheet.autoSizeColumn(i);
+                categoriesSheet.setColumnWidth(i, 5120);
             }
             
             // Suppliers Sheet
@@ -102,7 +102,7 @@ public class ExportService {
                 row.createCell(5).setCellValue(supplier.getAddress() != null ? supplier.getAddress() : "");
             }
             for (int i = 0; i < supplierColumns.length; i++) {
-                suppliersSheet.autoSizeColumn(i);
+                suppliersSheet.setColumnWidth(i, 5120);
             }
             
             // Inventory Sheet
@@ -128,7 +128,7 @@ public class ExportService {
                 row.createCell(7).setCellValue(inventory.getLastUpdated() != null ? inventory.getLastUpdated().toString() : "");
             }
             for (int i = 0; i < inventoryColumns.length; i++) {
-                inventorySheet.autoSizeColumn(i);
+                inventorySheet.setColumnWidth(i, 5120);
             }
             
             workbook.write(out);
@@ -171,7 +171,7 @@ public class ExportService {
             }
 
             for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, 5120);
             }
 
             workbook.write(out);
@@ -213,7 +213,7 @@ public class ExportService {
             }
 
             for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, 5120);
             }
 
             workbook.write(out);
@@ -257,7 +257,7 @@ public class ExportService {
             }
 
             for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, 5120);
             }
 
             workbook.write(out);
@@ -297,7 +297,7 @@ public class ExportService {
             }
 
             for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, 5120);
             }
 
             workbook.write(out);

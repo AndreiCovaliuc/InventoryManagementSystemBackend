@@ -42,11 +42,11 @@ public class ExportController {
             headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
             
             return new ResponseEntity<>(excelContent, headers, HttpStatus.OK);
-        } catch (Exception e) {
-            log.error("Export failed", e);
+        } catch (Throwable t) {
+            log.error("Export failed", t);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(("Export failed: " + e.getClass().getSimpleName() + " - " + e.getMessage()).getBytes());
+                    .body(("Export failed: " + t.getClass().getSimpleName() + " - " + t.getMessage()).getBytes());
         }
     }
 
