@@ -83,9 +83,15 @@ public class AdminUserController {
             
             existingUser.setName(userDTO.getName());
             existingUser.setEmail(userDTO.getEmail());
-            
+
             if (userDTO.getRole() != null && !userDTO.getRole().isEmpty()) {
-                existingUser.setRole(User.Role.valueOf(userDTO.getRole()));
+                User.Role newRole = User.Role.valueOf(userDTO.getRole());
+                if (existingUser.getRole() == User.Role.ADMIN && newRole != User.Role.ADMIN
+                        && userService.countAdmins(company) <= 1) {
+                    return ResponseEntity.badRequest().body(
+                            "At least one administrator is required. Promote another user to admin before demoting this one.");
+                }
+                existingUser.setRole(newRole);
             }
             
             if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
