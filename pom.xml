@@ -87,10 +87,10 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Spring AI with Ollama -->
+		<!-- Spring AI with OpenAI-compatible provider (Groq) -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
 			<version>${spring-ai.version}</version>
 		</dependency>
 		<!-- WebSocket for real-time features -->
